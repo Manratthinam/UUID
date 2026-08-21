@@ -87,7 +87,12 @@ jobs:
     name: Docker Build & Push
     runs-on: ubuntu-latest
     needs: build-and-test          # only runs if tests pass
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Runs only on push to main AND only when Docker Hub secrets are configured
+    if: |
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      secrets.DOCKERHUB_USERNAME != '' &&
+      secrets.DOCKERHUB_TOKEN != ''
 
     steps:
       - name: Checkout repository
