@@ -15,7 +15,8 @@ env:
   DOTNET_VERSION: '9.0.x'
   SOLUTION_FILE: 'UUID.sln'
   TEST_PROJECT: 'UUID.Tests/UUID.Tests.csproj'
-  IMAGE_NAME: uuid-app   # change to your Docker Hub image name
+  IMAGE_NAME: uuid-app          # change to your Docker Hub image name
+  COVERAGE_THRESHOLD: 80        # minimum % required to proceed to Docker deployment
 
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 jobs:
@@ -69,7 +70,39 @@ jobs:
             --logger "trx;LogFileName=test-results.trx" \
             --collect:"XPlat Code Coverage"
 
-      # 7. Upload test results as artifact
+      # 7. Enforce coverage threshold — blocks Docker deployment if below 80%
+      - name: Check code coverage (≥ ${{ env.COVERAGE_THRESHOLD }}%)
+        run: |
+          python3 - <<'EOF'
+          import xml.etree.ElementTree as ET, glob, sys, os
+
+          threshold = int(os.environ.get('COVERAGE_THRESHOLD', 80))
+
+          files = glob.glob('./**/coverage.cobertura.xml', recursive=True)
+          if not files:
+              print('❌ No coverage.cobertura.xml found — make sure XPlat Code Coverage ran.')
+              sys.exit(1)
+
+          root = ET.parse(files[0]).getroot()
+          line_rate  = float(root.get('line-rate',  0)) * 100
+          branch_rate = float(root.get('branch-rate', 0)) * 100
+
+          print(f'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+          print(f'📊 Line Coverage   : {line_rate:.1f}%')
+          print(f'📊 Branch Coverage : {branch_rate:.1f}%')
+          print(f'🎯 Required        : {threshold}%')
+          print(f'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+          if line_rate < threshold:
+              print(f'❌ FAILED — Line coverage {line_rate:.1f}% is below {threshold}% threshold.')
+              print(f'   Docker deployment is BLOCKED until coverage improves.')
+              sys.exit(1)
+
+          print(f'✅ PASSED — Coverage {line_rate:.1f}% meets the {threshold}% threshold.')
+          print(f'   Proceeding to Docker deployment.')
+          EOF
+
+      # 8. Upload test results as artifact (always, even on failure)
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()   # always upload even on failure, useful for debugging
