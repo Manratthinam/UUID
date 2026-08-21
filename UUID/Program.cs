@@ -1,8 +1,10 @@
+namespace UUID;
+
 using System.Diagnostics.CodeAnalysis;
-using UUID;
 
 [ExcludeFromCodeCoverage]
 internal class Program
+
 {
     private static void Main(string[] args)
     {
