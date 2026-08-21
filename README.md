@@ -1,63 +1,162 @@
 # Longest Increasing Subarray Finder
 
-A C# .NET console application that finds the **longest contiguous strictly increasing subarray** from a sequence of space-separated integers.
+A **.NET 9.0** console application that finds the longest **contiguous strictly increasing subarray** from a space-separated list of integers. The solution runs interactively in the terminal and is fully containerised with Docker.
 
-## Problem Definition
+---
 
-Given a string of integers separated by single spaces, find and return the longest contiguous subarray where each element is strictly greater than the previous. If multiple subarrays share the longest length, the **earliest** one is returned.
+## Table of Contents
 
-### Examples
+- [Problem Statement](#problem-statement)
+- [Algorithm](#algorithm)
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Running Locally](#running-locally)
+- [Running with Docker](#running-with-docker)
+- [Running Tests](#running-tests)
+- [Example Usage](#example-usage)
+- [Test Coverage](#test-coverage)
 
-| Input | Output |
-|-------|--------|
-| `6 1 5 9 2` | `1 5 9` |
-| `6 2 4 6 1 5 9 2` | `2 4 6` *(tie → earliest wins)* |
-| `6 2 4 3 1 5 9` | `1 5 9` |
+---
+
+## Problem Statement
+
+Given a sequence of integers, find the **longest contiguous subarray** where every element is strictly greater than the previous one.
+
+- If multiple subarrays share the same maximum length, the **earliest** one is returned.
+- Input and output are both **space-separated integers**.
+
+| Input          | Output  | Reason                        |
+|----------------|---------|-------------------------------|
+| `6 1 5 9 2`    | `1 5 9` | Length 3, starts at index 1   |
+| `9 4 1 2 3`    | `1 2 3` | Length 3, starts at index 2   |
+| `6 2 4 6 1 5 9 2` | `2 4 6` | Tie → earliest run wins  |
+| `1 2 3 4 5`    | `1 2 3 4 5` | Entire array ascending   |
+| `9 7 5 3 1`    | `9`     | All descending, length 1      |
+
+---
+
+## Algorithm
+
+The core logic lives in [`UUID/LongestSequesnce.cs`](UUID/LongestSequesnce.cs) and runs in a single pass.
+
+```
+bestStart = 0, bestLen = 1
+currStart = 0, currLen = 1
+
+for i = 1 to n-1:
+    if nums[i] > nums[i-1]:
+        currLen++
+    else:
+        currStart = i
+        currLen   = 1
+
+    if currLen > bestLen:          // strict > preserves earliest on tie
+        bestLen   = currLen
+        bestStart = currStart
+
+return nums[bestStart .. bestStart + bestLen - 1]
+```
+
+| Property        | Value |
+|-----------------|-------|
+| Time complexity | O(n)  |
+| Space complexity| O(n) — output array |
 
 ---
 
 ## Project Structure
 
 ```
-UUID/
-├── UUID/                  ← Console application
-│   ├── UUID.csproj
-│   ├── Program.cs         ← Entry point (interactive & test-case modes)
-│   └── LIS.cs             ← Core algorithm
-├── UUID.Tests/            ← NUnit test project
-│   ├── UUID.Tests.csproj
-│   └── LISTests.cs
-├── test-cases/            ← Put .txt input files here
-├── outputs/               ← Auto-generated results go here
-├── UUID.sln
-└── README.md
+UUID/                          ← Solution root
+├── UUID.sln                   ← Solution file
+│
+├── UUID/                      ← Console application
+│   ├── UUID.csproj            ← Project file (.NET 9.0 Exe)
+│   ├── Program.cs             ← Interactive REPL entry point
+│   └── LongestSequesnce.cs    ← Core algorithm (static class)
+│
+├── UUID.Tests/                ← NUnit test project
+│   ├── UUID.Tests.csproj      ← Project file (NUnit 4 / .NET 9.0)
+│   └── LongestSequenceTest.cs ← 16 unit tests (provided + edge cases)
+│
+├── Dockerfile                 ← Multi-stage build (SDK → Runtime)
+├── docker-compose.yml         ← Interactive container config
+├── .dockerignore              ← Docker build exclusions
+└── .gitignore                 ← Git exclusions
 ```
 
 ---
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
+| Tool           | Version  | Required for          |
+|----------------|----------|-----------------------|
+| .NET SDK       | 9.0+     | Local build & test    |
+| Docker Desktop | any      | Container run         |
+| Docker Compose | v2+      | `docker-compose` cmds |
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download)
+---
 
-### Build
+## Running Locally
 
-```bash
-dotnet build
+### Build & Run
+
+```powershell
+# From the solution root
+dotnet run --project UUID/UUID.csproj
+```
+
+### Build only
+
+```powershell
+dotnet build UUID.sln
 ```
 
 ---
 
-## Running the App
+## Running with Docker
 
-### Interactive Mode (default)
+### Option 1 — docker-compose (recommended for interactive use)
 
-Enter sequences manually, one per prompt:
-
-```bash
-dotnet run --project UUID
+```powershell
+# Build and attach (interactive mode)
+docker-compose run --rm uuid-app
 ```
+
+### Option 2 — docker build + run
+
+```powershell
+# Build the image
+docker build -t uuid-app .
+
+# Run interactively
+docker run -it --rm uuid-app
+```
+
+> **Note:** The container is configured with `stdin_open: true` and `tty: true` in `docker-compose.yml` so the REPL accepts keyboard input.
+
+### Stopping the container
+
+Type `exit` or `quit` at the `Input:` prompt, or press <kbd>Ctrl+C</kbd>.
+
+---
+
+## Running Tests
+
+```powershell
+# Run all tests from the solution root
+dotnet test UUID.sln
+
+# With verbose output
+dotnet test UUID.sln --logger "console;verbosity=detailed"
+
+# With code coverage
+dotnet test UUID.sln --collect:"XPlat Code Coverage"
+```
+
+---
+
+## Example Usage
 
 ```
 ═══════════════════════════════════════════════════
@@ -65,95 +164,64 @@ dotnet run --project UUID
   Enter 'quit' or 'exit' to stop.
 ═══════════════════════════════════════════════════
 
+Input: 9 4 1 2 3
+Output: 1 2 3
+
 Input: 6 1 5 9 2
 Output: 1 5 9
 
-Input: quit
-```
+Input: 1 2 3 4 5
+Output: 1 2 3 4 5
 
-### Test-Cases Mode
+Input: 3 3 3
+Output: 3
 
-Reads every `.txt` file from `test-cases/`, prints each output to the console, and saves results to `outputs/`:
+Input: hello
+Error: Input must contain only integers separated by spaces.
 
-```bash
-dotnet run --project UUID -- --test
-```
-
-```
-═══════════════════════════════════════════════════
-  Running 4 test case(s)...
-═══════════════════════════════════════════════════
-
-[test1]
-  Input  : 6 1 5 9 2...
-  Output : 1 5 9
-  Saved  : outputs/test1_output.txt
-...
-```
-
-#### Adding your own test cases
-
-Place a `.txt` file in `test-cases/` with one integer sequence per line:
-
-```
-# test-cases/mytest.txt
-6 1 5 9 2
-6 2 4 6 1 5 9 2
+Input: exit
 ```
 
 ---
 
-## Running the Tests
+## Test Coverage
 
-```bash
-dotnet test
-```
+The test suite in `UUID.Tests/LongestSequenceTest.cs` covers **16 test cases**:
 
-All 14 tests should pass (11 provided test cases + 3 edge cases).
+### Provided Test Cases
 
-```
-Passed!  - Failed: 0, Passed: 14, Skipped: 0
-```
+| Test | Input (summary) | Expected Output |
+|------|----------------|-----------------|
+| TC1  | `6 1 5 9 2` | `1 5 9` |
+| TC4  | 64-element sequence | `3862 16353 22813 28735` |
+| TC5  | 128-element sequence | `11084 11970 24975 30922` |
+| TC6  | 43-element sequence | `3808 3908 10386 19306` |
+| TC7  | 300-element sequence | `125 1841 5882 18464 28317 31497` |
+| TC8  | 19-element sequence | `9139 17687 25106 26202 27592 30937` |
+| TC10 | Tie-break: earliest wins | `2 4 6` |
+| TC11 | Tie-break: different runs | `1 5 9` |
 
----
+### Edge Cases
 
-## Algorithm
-
-The algorithm is **O(n) time, O(n) space**:
-
-1. Scan left to right, tracking the current run start and length.
-2. When `nums[i] > nums[i-1]`, extend the current run.
-3. Otherwise, reset the current run at position `i`.
-4. Update the best run only when the current run is **strictly longer** (preserves the earliest run on ties).
-
-```csharp
-// Core loop (simplified)
-for (int i = 1; i < nums.Length; i++)
-{
-    if (nums[i] > nums[i - 1])
-        currLen++;
-    else
-    {
-        currStart = i;
-        currLen = 1;
-    }
-
-    if (currLen > bestLen)
-    {
-        bestLen = currLen;
-        bestStart = currStart;
-    }
-}
-```
+| Test | Scenario |
+|------|----------|
+| Single element | Returns that element |
+| All descending | Returns first element only |
+| All ascending | Returns entire sequence |
+| Equal elements (`3 3 3`) | Returns first element (not strictly increasing) |
+| Empty string | Returns empty string |
+| Whitespace-only string | Returns empty string |
+| Two ascending elements | Returns both |
+| Two descending elements | Returns first |
+| Non-integer input | Throws `FormatException` |
 
 ---
 
-## Verifying the Solution
+## Dependencies
 
-You can verify any of the 11 provided test cases:
-
-```bash
-dotnet run --project UUID -- --test
-```
-
-Outputs are saved to `outputs/` so you can diff them against the expected values in `code-test.md`.
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `NUnit` | 4.2.2 | Test framework |
+| `NUnit3TestAdapter` | 4.6.0 | VS / CLI test runner adapter |
+| `Microsoft.NET.Test.Sdk` | 17.11.1 | Test host |
+| `coverlet.collector` | 6.0.2 | Code coverage collection |
