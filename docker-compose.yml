@@ -1,0 +1,9 @@
+services:
+  uuid-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uuid-app
+    # Required for interactive console input
+    stdin_open: true
+    tty: true

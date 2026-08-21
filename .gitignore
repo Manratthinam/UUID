@@ -1,0 +1,11 @@
+.vs/
+
+UUID/bin/
+UUID/obj/
+
+UUID.Tests/bin/
+UUID.Tests/obj/
+
+# OS files
+.DS_Store
+Thumbs.db
